@@ -22,15 +22,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-// User Schema
-const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
-});
-const User = mongoose.model('User', userSchema);
-
 // JWT Secret
-// Use JWT_SECRET from .env
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Auth Middleware
@@ -50,30 +42,12 @@ const authenticateJWT = (req, res, next) => {
     }
 };
 
-// Register Endpoint
-app.post('/register', async (req, res) => {
-    try {
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const user = new User({
-            username: req.body.username,
-            password: hashedPassword
-        });
-        await user.save();
-        res.status(201).send('User registered');
-    } catch (error) {
-        res.status(500).send('Error registering user');
-    }
-});
-
-// Login Endpoint
-app.post('/login', async (req, res) => {
-    const user = await User.findOne({ username: req.body.username });
-    if (user && await bcrypt.compare(req.body.password, user.password)) {
-        const accessToken = jwt.sign({ username: user.username }, JWT_SECRET);
-        res.json({ accessToken });
-    } else {
-        res.status(401).send('Invalid credentials');
-    }
+// Token Generation Endpoint
+app.post('/token', (req, res) => {
+    // For simplicity, we'll generate a token for any request
+    // In production, you should validate credentials here
+    const token = jwt.sign({ username: 'user' }, JWT_SECRET);
+    res.json({ token });
 });
 
 // Protect existing endpoints with JWT
