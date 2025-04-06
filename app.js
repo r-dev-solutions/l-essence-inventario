@@ -14,6 +14,22 @@ app.use(cors({
 app.use(helmet());
 app.use(express.json());
 
+// Middleware - Update CORS configuration
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Add OPTIONS handler for preflight requests
+app.options('*', cors());
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Something went wrong!' });
+});
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
@@ -32,6 +48,7 @@ const authenticateJWT = (req, res, next) => {
         const token = authHeader.split(' ')[1];
         jwt.verify(token, JWT_SECRET, (err, user) => {
             if (err) {
+                console.error('JWT verification error:', err);
                 return res.sendStatus(403);
             }
             req.user = user;
@@ -44,10 +61,18 @@ const authenticateJWT = (req, res, next) => {
 
 // Token Generation Endpoint
 app.post('/token', (req, res) => {
-    // For simplicity, we'll generate a token for any request
-    // In production, you should validate credentials here
-    const token = jwt.sign({ username: 'user' }, JWT_SECRET);
-    res.json({ token });
+    try {
+        // Generate token with expiration
+        const token = jwt.sign(
+            { username: 'api-user' }, 
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+        res.json({ token });
+    } catch (error) {
+        console.error('Token generation error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Protect existing endpoints with JWT
