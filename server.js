@@ -104,8 +104,12 @@ app.post('/products', async (req, res) => {
                     imagen_secundaria,
                     imagen_alternativa,
                     location
-                },
-                $setOnInsert: {
+                }
+            };
+
+            // Handle presentaciones separately
+            const presentacionesUpdate = {
+                $set: {
                     presentaciones: presentaciones.map(p => ({
                         presentacion: p.presentacion,
                         stock: p.stock || 0
@@ -113,20 +117,30 @@ app.post('/products', async (req, res) => {
                 }
             };
 
-            // For existing products, update presentaciones
-            for (const presentacionData of presentaciones) {
-                update.$inc = update.$inc || {};
-                update.$inc[`presentaciones.$[elem].stock`] = presentacionData.stock || 0;
-            }
+            // For existing products, update stock using $inc
+            const stockUpdates = presentaciones.map(p => ({
+                updateOne: {
+                    filter: { 
+                        codigo, 
+                        location,
+                        'presentaciones.presentacion': p.presentacion
+                    },
+                    update: {
+                        $inc: { 'presentaciones.$.stock': p.stock || 0 }
+                    }
+                }
+            }));
 
             bulkOps.push({
                 updateOne: {
                     filter: { codigo, location },
-                    update,
-                    upsert: true,
-                    arrayFilters: [{ 'elem.presentacion': { $in: presentaciones.map(p => p.presentacion) } }]
+                    update: update,
+                    upsert: true
                 }
             });
+
+            // Add separate operations for stock updates
+            bulkOps.push(...stockUpdates);
         }
 
         if (bulkOps.length > 0) {
