@@ -1,28 +1,21 @@
 # Environment variables
 .env
 
-# API Documentation
-api_documentation.txt
-
 # Node modules
 node_modules/
 
 # Logs
-logs
+logs/
 *.log
-npm-debug.log*
 
-# Environment
-.env.local
-.env.development
-.env.test
-.env.production
+# API documentation
+api_documentation.txt
 
-# IDE specific files
-.idea/
-.vscode/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
