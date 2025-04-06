@@ -60,6 +60,7 @@ const authenticateJWT = (req, res, next) => {
 };
 
 // Token Generation Endpoint
+// Ensure all route paths are properly formatted
 app.post('/token', (req, res) => {
     try {
         // Generate token with expiration
