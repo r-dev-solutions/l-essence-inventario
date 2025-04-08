@@ -30,6 +30,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Define a Product schema
 const productSchema = new mongoose.Schema({
+    nombre: String, // Added field
+    concentracion_alcohol: Number, // Added field
     precio: Number,
     precio_neto: Number,
     precio_neto_cs: Number,
@@ -78,6 +80,7 @@ app.post('/products', async (req, res) => {
             }
 
             const { 
+                nombre = '', concentracion_alcohol = 0, // Added fields
                 codigo, location = '', 
                 precio = 0, precio_neto = 0, precio_neto_cs = 0,
                 descripcion = '', marca = '', genero = 'Unisex',
@@ -89,6 +92,8 @@ app.post('/products', async (req, res) => {
 
             const update = {
                 $set: {
+                    nombre, // Added field
+                    concentracion_alcohol, // Added field
                     precio,
                     precio_neto,
                     precio_neto_cs,
