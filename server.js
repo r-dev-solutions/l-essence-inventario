@@ -51,7 +51,7 @@ const productSchema = new mongoose.Schema({
     presentaciones: [{
         presentacion: {
             type: String,
-            enum: ['50ml', '100ml', '150ml', '200ml']
+            enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
         },
         stock: Number
     }],
