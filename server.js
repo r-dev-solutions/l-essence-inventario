@@ -333,21 +333,28 @@ const verifyToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
+        console.log('No token provided in request');
         return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     try {
+        console.log('Received token:', token);
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('Decoded token:', decoded);
         req.user = decoded;
         next();
     } catch (error) {
-        res.status(400).json({ error: 'Invalid token.' });
+        console.error('Token verification error:', error);
+        res.status(400).json({ 
+            error: 'Invalid token.',
+            details: error.message 
+        });
     }
 };
 
-// Apply JWT verification to all routes except health check
+// Apply JWT verification to all routes except health check and product by ID
 app.use((req, res, next) => {
-    if (req.path === '/health') {
+    if (req.path === '/health' || req.path.startsWith('/products/id/')) {
         return next();
     }
     verifyToken(req, res, next);
