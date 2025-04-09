@@ -442,3 +442,56 @@ app.get('/products/id/:id', async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
+
+// PUT: Update stock for a specific presentation
+app.put('/products/presentation/:presentationId', async (req, res) => {
+    try {
+        // Validate presentation ID format
+        if (!mongoose.Types.ObjectId.isValid(req.params.presentationId)) {
+            return res.status(400).json({ 
+                error: 'Invalid presentation ID format',
+                receivedId: req.params.presentationId,
+                expectedFormat: 'MongoDB ObjectId'
+            });
+        }
+
+        const { stock } = req.body;
+        if (stock === undefined || typeof stock !== 'number') {
+            return res.status(400).json({ 
+                error: 'Stock value is required and must be a number'
+            });
+        }
+
+        // Find and update the specific presentation
+        const product = await Product.findOneAndUpdate(
+            { 'presentaciones._id': req.params.presentationId },
+            { $set: { 'presentaciones.$.stock': stock } },
+            { new: true }
+        );
+
+        if (!product) {
+            return res.status(404).json({ 
+                error: 'Presentation not found',
+                details: `No presentation found with ID: ${req.params.presentationId}`
+            });
+        }
+
+        // Find the updated presentation
+        const updatedPresentation = product.presentaciones.find(p => 
+            p._id.toString() === req.params.presentationId
+        );
+
+        res.status(200).json({
+            message: 'Stock updated successfully',
+            presentation: updatedPresentation,
+            productId: product._id
+        });
+
+    } catch (error) {
+        console.error('Error in PUT /products/presentation/:presentationId:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message 
+        });
+    }
+});
