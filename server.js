@@ -54,7 +54,18 @@ const productSchema = new mongoose.Schema({
     imagen_primaria: String,
     imagen_secundaria: String,
     imagen_alternativa: String,
-    location: String
+    location: String,
+    presentaciones: [{
+        presentacion: {
+            type: String,
+            enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
+        },
+        stock: Number,
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product'
+        }
+    }],
 });
 
 // Create a Product model
@@ -68,7 +79,7 @@ app.post('/products', async (req, res) => {
         const results = [];
 
         for (const productData of products) {
-            if (!productData.codigo || !productData.presentacion) {
+            if (!productData.codigo || !productData.presentaciones) {
                 results.push({ status: 'error', message: 'Missing required fields', product: productData });
                 continue;
             }
@@ -332,6 +343,7 @@ app.use((req, res, next) => {
 // PUT: Update product by _id
 app.put('/products/id/:id', async (req, res) => {
     try {
+        // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ 
                 error: 'Invalid product ID format',
@@ -348,8 +360,28 @@ app.put('/products/id/:id', async (req, res) => {
             });
         }
 
-        // Update fields
-        const fieldsToUpdate = Object.keys(req.body);
+        // Handle presentaciones updates
+        if (req.body.presentaciones) {
+            req.body.presentaciones.forEach(newPres => {
+                const existingPres = product.presentaciones.find(p => 
+                    p.presentacion === newPres.presentacion
+                );
+                
+                if (existingPres) {
+                    // Update existing presentation
+                    existingPres.stock = newPres.stock || existingPres.stock;
+                } else {
+                    // Add new presentation
+                    product.presentaciones.push({
+                        presentacion: newPres.presentacion,
+                        stock: newPres.stock || 0
+                    });
+                }
+            });
+        }
+
+        // Update other fields
+        const fieldsToUpdate = Object.keys(req.body).filter(key => key !== 'presentaciones');
         fieldsToUpdate.forEach(field => {
             if (req.body[field] !== undefined) {
                 product[field] = req.body[field];
