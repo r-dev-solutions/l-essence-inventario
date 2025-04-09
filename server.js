@@ -364,7 +364,11 @@ app.put('/products/id/:id', async (req, res) => {
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             console.log('Invalid ID format:', req.params.id);
-            return res.status(400).json({ error: 'Invalid product ID format' });
+            return res.status(400).json({ 
+                error: 'Invalid product ID format',
+                receivedId: req.params.id,
+                expectedFormat: 'MongoDB ObjectId'
+            });
         }
 
         // Log debugging information
@@ -375,11 +379,12 @@ app.put('/products/id/:id', async (req, res) => {
         const existingProduct = await Product.findById(req.params.id);
         if (!existingProduct) {
             console.log('Product not found with ID:', req.params.id);
-            console.log('Available product IDs:', await Product.find({}, '_id'));
+            const allProducts = await Product.find({}, '_id');
+            console.log('Available product IDs:', allProducts);
             return res.status(404).json({ 
                 error: 'Product not found',
                 details: `No product found with ID: ${req.params.id}`,
-                availableIds: (await Product.find({}, '_id')).map(p => p._id)
+                availableIds: allProducts.map(p => p._id)
             });
         }
 
