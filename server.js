@@ -134,40 +134,7 @@ app.post('/products', async (req, res) => {
     }
 });
 
-// PUT: Update product details or stock
-app.put('/products/:codigo/:talla', async (req, res) => {
-    try {
-        const { codigo, talla } = req.params;
-        const { precio, descripcion, precio_cs, stock, img_url1, img_url2, img_url3, img_url4, img_url5, location } = req.body;
-        
-        const product = await Product.findOne({ codigo, 'tallas.talla': talla });
-        if (product) {
-            const tallaIndex = product.tallas.findIndex(t => t.talla === talla);
-            if (tallaIndex === -1) {
-                return res.status(404).send('Talla not found');
-            }
-
-            if (precio !== undefined) product.precio = precio;
-            if (descripcion !== undefined) product.descripcion = descripcion;
-            if (precio_cs !== undefined) product.precio_cs = precio_cs;
-            if (stock !== undefined) product.tallas[tallaIndex].stock = stock;
-            if (img_url1 !== undefined) product.img_url1 = img_url1;
-            if (img_url2 !== undefined) product.img_url2 = img_url2;
-            if (img_url3 !== undefined) product.img_url3 = img_url3;
-            if (img_url4 !== undefined) product.img_url4 = img_url4;
-            if (img_url5 !== undefined) product.img_url5 = img_url5;
-            if (location !== undefined) product.location = location;
-
-            await product.save();
-            res.json(product);
-        } else {
-            res.status(404).send('Product not found');
-        }
-    } catch (error) {
-        console.error('Error in PUT /products/:codigo/:talla:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+// Remove the PUT /products/:codigo/:talla endpoint completely
 
 // GET: Retrieve all products
 app.get('/products', async (req, res) => {
@@ -331,7 +298,7 @@ app.use((req, res, next) => {
 });
 
 // PUT: Update product by _id
-app.put('/products/id/:id', async (req, res) => {
+app.put('/products/:id', async (req, res) => {
     try {
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -344,62 +311,41 @@ app.put('/products/id/:id', async (req, res) => {
 
         const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ 
-                error: 'Product not found',
-                details: `No product found with ID: ${req.params.id}`
-            });
+            return res.status(404).send('Product not found');
         }
 
-        // Actualiza el volumen si está presente
-        if (req.body.volumen) {
-            product.volumen = req.body.volumen;
-        }
+        // Update product fields
+        const { 
+            nombre, concentracion_alcohol, precio, precio_neto, precio_neto_cs,
+            descripcion, marca, genero, categoria, etiquetas, tiene_descuento,
+            porcentaje_descuento, precio_con_descuento, stock,
+            imagen_primaria, imagen_secundaria, imagen_alternativa, location
+        } = req.body;
 
-        // Handle presentaciones updates
-        if (req.body.presentaciones) {
-            req.body.presentaciones.forEach(newPres => {
-                const existingPres = product.presentaciones.find(p => 
-                    p.presentacion === newPres.presentacion
-                );
-                
-                if (existingPres) {
-                    // Update existing presentation
-                    existingPres.stock = newPres.stock || existingPres.stock;
-                } else {
-                    // Add new presentation
-                    product.presentaciones.push({
-                        presentacion: newPres.presentacion,
-                        stock: newPres.stock || 0
-                    });
-                }
-            });
-        }
+        if (nombre !== undefined) product.nombre = nombre;
+        if (concentracion_alcohol !== undefined) product.concentracion_alcohol = concentracion_alcohol;
+        if (precio !== undefined) product.precio = precio;
+        if (precio_neto !== undefined) product.precio_neto = precio_neto;
+        if (precio_neto_cs !== undefined) product.precio_neto_cs = precio_neto_cs;
+        if (descripcion !== undefined) product.descripcion = descripcion;
+        if (marca !== undefined) product.marca = marca;
+        if (genero !== undefined) product.genero = genero;
+        if (categoria !== undefined) product.categoria = categoria;
+        if (etiquetas !== undefined) product.etiquetas = etiquetas;
+        if (tiene_descuento !== undefined) product.tiene_descuento = tiene_descuento;
+        if (porcentaje_descuento !== undefined) product.porcentaje_descuento = porcentaje_descuento;
+        if (precio_con_descuento !== undefined) product.precio_con_descuento = precio_con_descuento;
+        if (stock !== undefined) product.stock = stock;
+        if (imagen_primaria !== undefined) product.imagen_primaria = imagen_primaria;
+        if (imagen_secundaria !== undefined) product.imagen_secundaria = imagen_secundaria;
+        if (imagen_alternativa !== undefined) product.imagen_alternativa = imagen_alternativa;
+        if (location !== undefined) product.location = location;
 
-        // Update other fields
-        const fieldsToUpdate = Object.keys(req.body).filter(key => key !== 'presentaciones');
-        fieldsToUpdate.forEach(field => {
-            if (req.body[field] !== undefined) {
-                product[field] = req.body[field];
-            }
-        });
-
-        const updatedProduct = await product.save();
-        res.status(200).json(updatedProduct);
-
+        await product.save();
+        res.json(product);
     } catch (error) {
-        console.error('Error in PUT /products/id/:id:', error);
-        
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ 
-                error: 'Validation failed',
-                details: error.message 
-            });
-        }
-
-        res.status(500).json({ 
-            error: 'Internal server error', 
-            details: error.message 
-        });
+        console.error('Error in PUT /products/:id:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 
@@ -446,21 +392,22 @@ app.put('/products/:_id', async (req, res) => {
     }
 });
 
-// Update DELETE endpoint
-app.delete('/products/:_id', async (req, res) => {
+// Update DELETE endpoint to use _id
+app.delete('/products/id/:id', async (req, res) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(req.params._id)) {
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ error: 'Invalid product ID format' });
         }
 
-        const product = await Product.findByIdAndDelete(req.params._id);
+        const product = await Product.findByIdAndDelete(req.params.id);
         if (product) {
             res.status(200).json({ message: 'Product deleted successfully' });
         } else {
             res.status(404).json({ error: 'Product not found' });
         }
     } catch (error) {
-        console.error('Error in DELETE /products/:_id:', error);
+        console.error('Error in DELETE /products/id/:id:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
