@@ -246,7 +246,7 @@ app.put('/products/:codigo', async (req, res) => {
     }
 });
 
-// DELETE: Remove a product
+// DELETE: Remove a product (keep this version)
 app.delete('/products/:codigo', async (req, res) => {
     try {
         const product = await Product.findOneAndDelete({ codigo: req.params.codigo });
@@ -261,16 +261,17 @@ app.delete('/products/:codigo', async (req, res) => {
     }
 });
 
+// Remove this duplicate DELETE route
 // DELETE: Remove product by codigo
-app.delete('/products/:codigo', async (req, res) => {
-    const { codigo } = req.params;
-    const result = await Product.deleteOne({ codigo });
-    if (result.deletedCount > 0) {
-        res.status(204).send();
-    } else {
-        res.status(404).send('Product not found');
-    }
-});
+// app.delete('/products/:codigo', async (req, res) => {
+//     const { codigo } = req.params;
+//     const result = await Product.deleteOne({ codigo });
+//     if (result.deletedCount > 0) {
+//         res.status(204).send();
+//     } else {
+//         res.status(404).send('Product not found');
+//     }
+// });
 
 // DELETE: Remove all products
 app.delete('/products/all', async (req, res) => {
@@ -350,4 +351,38 @@ app.use((req, res, next) => {
         return next();
     }
     verifyToken(req, res, next);
+});
+
+// PUT: Update product by _id
+app.put('/products/id/:id', async (req, res) => {
+    try {
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        if (product) {
+            res.status(200).json(product);
+        } else {
+            res.status(404).json({ error: 'Product not found' });
+        }
+    } catch (error) {
+        console.error('Error in PUT /products/id/:id:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// GET: Retrieve a single product by _id for easier debugging:
+app.get('/products/id/:id', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (product) {
+            res.status(200).json(product);
+        } else {
+            res.status(404).json({ error: 'Product not found' });
+        }
+    } catch (error) {
+        console.error('Error in GET /products/id/:id:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
 });
