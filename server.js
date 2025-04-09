@@ -27,7 +27,7 @@ mongoose.connect(process.env.MONGO_URI)
 // Define a Product schema
 const productSchema = new mongoose.Schema({
     nombre: String,
-    concentracion_alcohol: mongoose.Schema.Types.Mixed, // Changed to accept both string and number
+    concentracion_alcohol: mongoose.Schema.Types.Mixed,
     precio: Number,
     precio_neto: Number,
     precio_neto_cs: Number,
@@ -46,13 +46,11 @@ const productSchema = new mongoose.Schema({
     },
     porcentaje_descuento: Number,
     precio_con_descuento: Number,
-    presentaciones: [{
-        presentacion: {
-            type: String,
-            enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
-        },
-        stock: Number
-    }],
+    presentacion: {
+        type: String,
+        enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
+    },
+    stock: Number,
     imagen_primaria: String,
     imagen_secundaria: String,
     imagen_alternativa: String,
@@ -70,26 +68,26 @@ app.post('/products', async (req, res) => {
         const results = [];
 
         for (const productData of products) {
-            if (!productData.codigo || !productData.presentaciones) {
+            if (!productData.codigo || !productData.presentacion) {
                 results.push({ status: 'error', message: 'Missing required fields', product: productData });
                 continue;
             }
 
             const { 
-                nombre = '', concentracion_alcohol = 0, // Added fields
+                nombre = '', concentracion_alcohol = 0,
                 codigo, location = '', 
                 precio = 0, precio_neto = 0, precio_neto_cs = 0,
                 descripcion = '', marca = '', genero = 'Unisex',
                 categoria = '', etiquetas = [], tiene_descuento = false,
                 porcentaje_descuento = 0, precio_con_descuento = 0,
-                presentaciones, 
+                presentacion, stock = 0,
                 imagen_primaria = '', imagen_secundaria = '', imagen_alternativa = ''
             } = productData;
 
             const update = {
                 $set: {
-                    nombre, // Added field
-                    concentracion_alcohol, // Added field
+                    nombre,
+                    concentracion_alcohol,
                     precio,
                     precio_neto,
                     precio_neto_cs,
@@ -101,36 +99,14 @@ app.post('/products', async (req, res) => {
                     tiene_descuento,
                     porcentaje_descuento,
                     precio_con_descuento,
+                    presentacion,
+                    stock,
                     imagen_primaria,
                     imagen_secundaria,
                     imagen_alternativa,
                     location
                 }
             };
-
-            // Handle presentaciones separately
-            const presentacionesUpdate = {
-                $set: {
-                    presentaciones: presentaciones.map(p => ({
-                        presentacion: p.presentacion,
-                        stock: p.stock || 0
-                    }))
-                }
-            };
-
-            // For existing products, update stock using $inc
-            const stockUpdates = presentaciones.map(p => ({
-                updateOne: {
-                    filter: { 
-                        codigo, 
-                        location,
-                        'presentaciones.presentacion': p.presentacion
-                    },
-                    update: {
-                        $inc: { 'presentaciones.$.stock': p.stock || 0 }
-                    }
-                }
-            }));
 
             bulkOps.push({
                 updateOne: {
@@ -139,9 +115,6 @@ app.post('/products', async (req, res) => {
                     upsert: true
                 }
             });
-
-            // Add separate operations for stock updates
-            bulkOps.push(...stockUpdates);
         }
 
         if (bulkOps.length > 0) {
@@ -220,8 +193,6 @@ app.get('/products/:codigo', async (req, res) => {
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
-
-// POST: Add or update product stock (existing code remains unchanged)
 
 // PUT: Update product details
 app.put('/products/:codigo', async (req, res) => {
@@ -361,7 +332,6 @@ app.use((req, res, next) => {
 // PUT: Update product by _id
 app.put('/products/id/:id', async (req, res) => {
     try {
-        // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ 
                 error: 'Invalid product ID format',
@@ -370,7 +340,6 @@ app.put('/products/id/:id', async (req, res) => {
             });
         }
 
-        // Find the product
         const product = await Product.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ 
@@ -379,35 +348,14 @@ app.put('/products/id/:id', async (req, res) => {
             });
         }
 
-        // Handle presentaciones updates
-        if (req.body.presentaciones) {
-            req.body.presentaciones.forEach(newPres => {
-                const existingPres = product.presentaciones.find(p => 
-                    p.presentacion === newPres.presentacion
-                );
-                
-                if (existingPres) {
-                    // Update existing presentation
-                    existingPres.stock = newPres.stock || existingPres.stock;
-                } else {
-                    // Add new presentation
-                    product.presentaciones.push({
-                        presentacion: newPres.presentacion,
-                        stock: newPres.stock || 0
-                    });
-                }
-            });
-        }
-
-        // Update other fields
-        const fieldsToUpdate = Object.keys(req.body).filter(key => key !== 'presentaciones');
+        // Update fields
+        const fieldsToUpdate = Object.keys(req.body);
         fieldsToUpdate.forEach(field => {
             if (req.body[field] !== undefined) {
                 product[field] = req.body[field];
             }
         });
 
-        // Save the updated product
         const updatedProduct = await product.save();
         res.status(200).json(updatedProduct);
 
