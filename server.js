@@ -65,16 +65,28 @@ const Product = mongoose.model('Product', productSchema);
 // POST: Add or update product stock
 app.post('/products', async (req, res) => {
     try {
+        // Ensure the input is always an array
         const products = Array.isArray(req.body) ? req.body : [req.body];
-        const bulkOps = [];
         const results = [];
-
-        for (const productData of products) {
-            if (!productData.codigo || !productData.volumen) {
-                results.push({ status: 'error', message: 'Missing required fields', product: productData });
-                continue;
+        
+        // Validate all products first
+        for (const product of products) {
+            if (!product.codigo || !product.volumen) {
+                results.push({
+                    status: 'error',
+                    message: 'Missing required fields (codigo and volumen are required)',
+                    product
+                });
             }
+        }
 
+        // If any validation errors, return early
+        if (results.some(r => r.status === 'error')) {
+            return res.status(400).json(results);
+        }
+
+        // Process valid products
+        const bulkOps = products.map(productData => {
             const { 
                 nombre = '', concentracion_alcohol = 0,
                 codigo, location = '', 
@@ -86,51 +98,52 @@ app.post('/products', async (req, res) => {
                 imagen_primaria = '', imagen_secundaria = '', imagen_alternativa = ''
             } = productData;
 
-            const update = {
-                $set: {
-                    nombre,
-                    concentracion_alcohol,
-                    precio,
-                    precio_neto,
-                    precio_neto_cs,
-                    descripcion,
-                    marca,
-                    genero,
-                    categoria,
-                    etiquetas,
-                    tiene_descuento,
-                    porcentaje_descuento,
-                    precio_con_descuento,
-                    stock,
-                    imagen_primaria,
-                    imagen_secundaria,
-                    imagen_alternativa,
-                    location
-                }
-            };
-
-            bulkOps.push({
+            return {
                 updateOne: {
                     filter: { codigo: productData.codigo },
-                    update: update,
+                    update: {
+                        $set: {
+                            nombre,
+                            concentracion_alcohol,
+                            precio,
+                            precio_neto,
+                            precio_neto_cs,
+                            descripcion,
+                            marca,
+                            genero,
+                            categoria,
+                            etiquetas,
+                            tiene_descuento,
+                            porcentaje_descuento,
+                            precio_con_descuento,
+                            stock,
+                            imagen_primaria,
+                            imagen_secundaria,
+                            imagen_alternativa,
+                            location,
+                            volumen: productData.volumen // Ensure volumen is included
+                        }
+                    },
                     upsert: true
                 }
-            });
-        }
+            };
+        });
 
-        if (bulkOps.length > 0) {
-            const bulkResult = await Product.bulkWrite(bulkOps);
-            results.push({
-                status: 'success',
-                insertedCount: bulkResult.upsertedCount,
-                modifiedCount: bulkResult.modifiedCount
-            });
-        }
+        const bulkResult = await Product.bulkWrite(bulkOps);
+        
+        res.status(200).json({
+            status: 'success',
+            insertedCount: bulkResult.upsertedCount,
+            modifiedCount: bulkResult.modifiedCount,
+            details: bulkResult
+        });
 
-        res.status(200).json(results);
     } catch (error) {
         console.error('Error in POST /products:', error);
-        res.status(500).json({ error: 'Internal server error', details: error.message });
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message 
+        });
     }
 });
 
@@ -297,8 +310,8 @@ app.use((req, res, next) => {
     verifyToken(req, res, next);
 });
 
-// PUT: Update product by _id
-app.put('/products/:id', async (req, res) => {
+// PUT: Update product by _id - make sure this comes before similar routes
+app.put('/products/id/:id', async (req, res) => {
     try {
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -309,43 +322,26 @@ app.put('/products/:id', async (req, res) => {
             });
         }
 
-        const product = await Product.findById(req.params.id);
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
+        
         if (!product) {
-            return res.status(404).send('Product not found');
+            return res.status(404).json({ 
+                error: 'Product not found',
+                details: `No product found with ID: ${req.params.id}`
+            });
         }
 
-        // Update product fields
-        const { 
-            nombre, concentracion_alcohol, precio, precio_neto, precio_neto_cs,
-            descripcion, marca, genero, categoria, etiquetas, tiene_descuento,
-            porcentaje_descuento, precio_con_descuento, stock,
-            imagen_primaria, imagen_secundaria, imagen_alternativa, location
-        } = req.body;
-
-        if (nombre !== undefined) product.nombre = nombre;
-        if (concentracion_alcohol !== undefined) product.concentracion_alcohol = concentracion_alcohol;
-        if (precio !== undefined) product.precio = precio;
-        if (precio_neto !== undefined) product.precio_neto = precio_neto;
-        if (precio_neto_cs !== undefined) product.precio_neto_cs = precio_neto_cs;
-        if (descripcion !== undefined) product.descripcion = descripcion;
-        if (marca !== undefined) product.marca = marca;
-        if (genero !== undefined) product.genero = genero;
-        if (categoria !== undefined) product.categoria = categoria;
-        if (etiquetas !== undefined) product.etiquetas = etiquetas;
-        if (tiene_descuento !== undefined) product.tiene_descuento = tiene_descuento;
-        if (porcentaje_descuento !== undefined) product.porcentaje_descuento = porcentaje_descuento;
-        if (precio_con_descuento !== undefined) product.precio_con_descuento = precio_con_descuento;
-        if (stock !== undefined) product.stock = stock;
-        if (imagen_primaria !== undefined) product.imagen_primaria = imagen_primaria;
-        if (imagen_secundaria !== undefined) product.imagen_secundaria = imagen_secundaria;
-        if (imagen_alternativa !== undefined) product.imagen_alternativa = imagen_alternativa;
-        if (location !== undefined) product.location = location;
-
-        await product.save();
-        res.json(product);
+        res.status(200).json(product);
     } catch (error) {
-        console.error('Error in PUT /products/:id:', error);
-        res.status(500).json({ error: 'Internal server error', details: error.message });
+        console.error('Error in PUT /products/id/:id:', error);
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message 
+        });
     }
 });
 
