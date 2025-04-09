@@ -30,8 +30,8 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Define a Product schema
 const productSchema = new mongoose.Schema({
-    nombre: String, // Added field
-    concentracion_alcohol: Number, // Added field
+    nombre: String,
+    concentracion_alcohol: mongoose.Schema.Types.Mixed, // Changed to accept both string and number
     precio: Number,
     precio_neto: Number,
     precio_neto_cs: Number,
