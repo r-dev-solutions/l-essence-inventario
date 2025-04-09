@@ -19,8 +19,9 @@ app.use(cors({
 }));
 
 // Connect to MongoDB
+console.log('Attempting to connect to MongoDB...');
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(() => console.log('Successfully connected to MongoDB'))
     .catch(err => console.error('Could not connect to MongoDB', err));
 
 // Define a Product schema
