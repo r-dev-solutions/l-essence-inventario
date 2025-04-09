@@ -105,7 +105,7 @@ app.post('/products', async (req, res) => {
                 updateOne: {
                     filter: { 
                         codigo: productData.codigo,
-                        volumen: productData.volumen  // Now using compound key
+                        volumen: productData.volumen
                     },
                     update: {
                         $set: {
@@ -122,12 +122,13 @@ app.post('/products', async (req, res) => {
                             tiene_descuento,
                             porcentaje_descuento,
                             precio_con_descuento,
-                            stock,
+                            // Special handling for stock - add to existing value
+                            $inc: { stock: stock },
                             imagen_primaria,
                             imagen_secundaria,
                             imagen_alternativa,
                             location,
-                            volumen: productData.volumen // Ensure volumen is included
+                            volumen: productData.volumen
                         }
                     },
                     upsert: true
@@ -135,7 +136,7 @@ app.post('/products', async (req, res) => {
             };
         });
 
-        const bulkResult = await Product.bulkWrite(bulkOps);
+        const bulkResult = await Product.bulkWrite(bulkOps, { ordered: false });
         
         res.status(200).json({
             status: 'success',
@@ -147,6 +148,7 @@ app.post('/products', async (req, res) => {
     } catch (error) {
         console.error('Error in POST /products:', error);
         if (error.code === 11000) {
+            // This should now be very rare since we're using upsert
             return res.status(400).json({ 
                 error: 'Duplicate product',
                 details: 'A product with this codigo and volumen combination already exists'
