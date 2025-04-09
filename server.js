@@ -46,10 +46,6 @@ const productSchema = new mongoose.Schema({
     },
     porcentaje_descuento: Number,
     precio_con_descuento: Number,
-    presentacion: {
-        type: String,
-        enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
-    },
     stock: Number,
     imagen_primaria: String,
     imagen_secundaria: String,
@@ -59,19 +55,8 @@ const productSchema = new mongoose.Schema({
         type: String,
         enum: ['50ml', '75ml', '100ml', '150ml', '200ml'],
         unique: true
-    },
-    // Elimina el campo presentaciones
-    presentaciones: [{
-        presentacion: {
-            type: String,
-            enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
-        },
-        stock: Number,
-        productId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Product'
-        }
-    }],
+    }
+    // Removed presentacion field
 });
 
 // Create a Product model
@@ -97,7 +82,7 @@ app.post('/products', async (req, res) => {
                 descripcion = '', marca = '', genero = 'Unisex',
                 categoria = '', etiquetas = [], tiene_descuento = false,
                 porcentaje_descuento = 0, precio_con_descuento = 0,
-                presentacion, stock = 0,
+                stock = 0,
                 imagen_primaria = '', imagen_secundaria = '', imagen_alternativa = ''
             } = productData;
 
@@ -116,7 +101,6 @@ app.post('/products', async (req, res) => {
                     tiene_descuento,
                     porcentaje_descuento,
                     precio_con_descuento,
-                    presentacion,
                     stock,
                     imagen_primaria,
                     imagen_secundaria,
