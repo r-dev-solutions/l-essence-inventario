@@ -1,6 +1,5 @@
 require('dotenv').config(); // Load environment variables
-
-console.log('MONGODB_URI:', process.env.MONGODB_URI); // Log the URI to check if it's loaded correctly
+console.log('MONGO_URI:', process.env.MONGO_URI); // Log the URI to check if it's loaded correctly
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -20,10 +19,6 @@ app.use(cors({
 }));
 
 // Connect to MongoDB
-// Ensure dotenv is loaded at the very top
-require('dotenv').config();
-
-// Connect to MongoDB using the .env variable
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('Could not connect to MongoDB', err));
@@ -333,7 +328,10 @@ const verifyToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
-        console.log('No token provided in request');
+        // Only log if it's a protected route
+        if (!['/health', '/products', '/products/id/'].some(path => req.path.startsWith(path))) {
+            console.log('No token provided in request');
+        }
         return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
