@@ -334,9 +334,14 @@ app.put('/products/id/:id', async (req, res) => {
             });
         }
 
+        // Remove _id from request body if present to prevent modification attempts
+        const updateData = { ...req.body };
+        delete updateData._id;
+        delete updateData.__v;
+
         const product = await Product.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updateData,  // Use the cleaned update data
             { new: true }
         );
         
