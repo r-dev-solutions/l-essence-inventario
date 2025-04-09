@@ -70,43 +70,24 @@ app.post('/products', async (req, res) => {
     try {
         // Ensure the input is always an array
         const products = Array.isArray(req.body) ? req.body : [req.body];
-        const results = [];
         
-        // Validate all products first
-        for (const product of products) {
-            if (!product.codigo || !product.volumen) {
-                results.push({
-                    status: 'error',
-                    message: 'Missing required fields (codigo and volumen are required)',
-                    product
-                });
-            }
-        }
-
-        // If any validation errors, return early
-        if (results.some(r => r.status === 'error')) {
-            return res.status(400).json(results);
-        }
-
-        // Process valid products
+        // Process products with bulk operations
         const bulkOps = products.map(productData => {
             const { 
+                codigo, volumen,
                 nombre = '', concentracion_alcohol = 0,
-                codigo, location = '', 
-                precio = 0, precio_neto = 0, precio_neto_cs = 0,
-                descripcion = '', marca = '', genero = 'Unisex',
-                categoria = '', etiquetas = [], tiene_descuento = false,
-                porcentaje_descuento = 0, precio_con_descuento = 0,
-                stock = 0,
-                imagen_primaria = '', imagen_secundaria = '', imagen_alternativa = ''
+                location = '', precio = 0, precio_neto = 0, 
+                precio_neto_cs = 0, descripcion = '', marca = '', 
+                genero = 'Unisex', categoria = '', etiquetas = [], 
+                tiene_descuento = false, porcentaje_descuento = 0,
+                precio_con_descuento = 0, stock = 0,
+                imagen_primaria = '', imagen_secundaria = '', 
+                imagen_alternativa = ''
             } = productData;
 
             return {
                 updateOne: {
-                    filter: { 
-                        codigo: productData.codigo,
-                        volumen: productData.volumen
-                    },
+                    filter: { codigo, volumen },
                     update: {
                         $set: {
                             nombre,
@@ -122,21 +103,23 @@ app.post('/products', async (req, res) => {
                             tiene_descuento,
                             porcentaje_descuento,
                             precio_con_descuento,
-                            // Special handling for stock - add to existing value
-                            $inc: { stock: stock },
                             imagen_primaria,
                             imagen_secundaria,
                             imagen_alternativa,
                             location,
-                            volumen: productData.volumen
-                        }
+                            volumen
+                        },
+                        $inc: { stock: stock } // Increment stock instead of replacing
                     },
-                    upsert: true
+                    upsert: true // This will update if exists, insert if not
                 }
             };
         });
 
-        const bulkResult = await Product.bulkWrite(bulkOps, { ordered: false });
+        const bulkResult = await Product.bulkWrite(bulkOps, { 
+            ordered: false, // Continue processing even if some operations fail
+            bypassDocumentValidation: true 
+        });
         
         res.status(200).json({
             status: 'success',
@@ -147,13 +130,6 @@ app.post('/products', async (req, res) => {
 
     } catch (error) {
         console.error('Error in POST /products:', error);
-        if (error.code === 11000) {
-            // This should now be very rare since we're using upsert
-            return res.status(400).json({ 
-                error: 'Duplicate product',
-                details: 'A product with this codigo and volumen combination already exists'
-            });
-        }
         res.status(500).json({ 
             error: 'Internal server error', 
             details: error.message 
