@@ -328,17 +328,16 @@ const verifyToken = (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
-        // Only log if it's a protected route
-        if (!['/health', '/products', '/products/id/'].some(path => req.path.startsWith(path))) {
-            console.log('No token provided in request');
+        // Skip logging for public routes
+        const publicRoutes = ['/health', '/products', '/products/id/'];
+        if (!publicRoutes.some(path => req.path.startsWith(path))) {
+            return res.status(401).json({ error: 'Access denied. No token provided.' });
         }
-        return res.status(401).json({ error: 'Access denied. No token provided.' });
+        return next();
     }
 
     try {
-        console.log('Received token:', token);
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Decoded token:', decoded);
         req.user = decoded;
         next();
     } catch (error) {
