@@ -55,6 +55,12 @@ const productSchema = new mongoose.Schema({
     imagen_secundaria: String,
     imagen_alternativa: String,
     location: String,
+    volumen: {
+        type: String,
+        enum: ['50ml', '75ml', '100ml', '150ml', '200ml'],
+        unique: true
+    },
+    // Elimina el campo presentaciones
     presentaciones: [{
         presentacion: {
             type: String,
@@ -79,7 +85,7 @@ app.post('/products', async (req, res) => {
         const results = [];
 
         for (const productData of products) {
-            if (!productData.codigo || !productData.presentaciones) {
+            if (!productData.codigo || !productData.volumen) {
                 results.push({ status: 'error', message: 'Missing required fields', product: productData });
                 continue;
             }
@@ -121,7 +127,7 @@ app.post('/products', async (req, res) => {
 
             bulkOps.push({
                 updateOne: {
-                    filter: { codigo, location },
+                    filter: { codigo: productData.codigo },
                     update: update,
                     upsert: true
                 }
@@ -360,6 +366,11 @@ app.put('/products/id/:id', async (req, res) => {
             });
         }
 
+        // Actualiza el volumen si está presente
+        if (req.body.volumen) {
+            product.volumen = req.body.volumen;
+        }
+
         // Handle presentaciones updates
         if (req.body.presentaciones) {
             req.body.presentaciones.forEach(newPres => {
@@ -424,54 +435,55 @@ app.get('/products/id/:id', async (req, res) => {
 });
 
 // PUT: Update stock for a specific presentation
-app.put('/products/presentation/:presentationId', async (req, res) => {
-    try {
-        // Validate presentation ID format
-        if (!mongoose.Types.ObjectId.isValid(req.params.presentationId)) {
-            return res.status(400).json({ 
-                error: 'Invalid presentation ID format',
-                receivedId: req.params.presentationId,
-                expectedFormat: 'MongoDB ObjectId'
-            });
-        }
-
-        const { stock } = req.body;
-        if (stock === undefined || typeof stock !== 'number') {
-            return res.status(400).json({ 
-                error: 'Stock value is required and must be a number'
-            });
-        }
-
-        // Find and update the specific presentation
-        const product = await Product.findOneAndUpdate(
-            { 'presentaciones._id': req.params.presentationId },
-            { $set: { 'presentaciones.$.stock': stock } },
-            { new: true }
-        );
-
-        if (!product) {
-            return res.status(404).json({ 
-                error: 'Presentation not found',
-                details: `No presentation found with ID: ${req.params.presentationId}`
-            });
-        }
-
-        // Find the updated presentation
-        const updatedPresentation = product.presentaciones.find(p => 
-            p._id.toString() === req.params.presentationId
-        );
-
-        res.status(200).json({
-            message: 'Stock updated successfully',
-            presentation: updatedPresentation,
-            productId: product._id
-        });
-
-    } catch (error) {
-        console.error('Error in PUT /products/presentation/:presentationId:', error);
-        res.status(500).json({ 
-            error: 'Internal server error', 
-            details: error.message 
-        });
-    }
-});
+// Elimina este endpoint
+// app.put('/products/presentation/:presentationId', async (req, res) => {
+//     try {
+//         // Validate presentation ID format
+//         if (!mongoose.Types.ObjectId.isValid(req.params.presentationId)) {
+//             return res.status(400).json({ 
+//                 error: 'Invalid presentation ID format',
+//                 receivedId: req.params.presentationId,
+//                 expectedFormat: 'MongoDB ObjectId'
+//             });
+//         }
+//
+//         const { stock } = req.body;
+//         if (stock === undefined || typeof stock !== 'number') {
+//             return res.status(400).json({ 
+//                 error: 'Stock value is required and must be a number'
+//             });
+//         }
+//
+//         // Find and update the specific presentation
+//         const product = await Product.findOneAndUpdate(
+//             { 'presentaciones._id': req.params.presentationId },
+//             { $set: { 'presentaciones.$.stock': stock } },
+//             { new: true }
+//         );
+//
+//         if (!product) {
+//             return res.status(404).json({ 
+//                 error: 'Presentation not found',
+//                 details: `No presentation found with ID: ${req.params.presentationId}`
+//             });
+//         }
+//
+//         // Find the updated presentation
+//         const updatedPresentation = product.presentaciones.find(p => 
+//             p._id.toString() === req.params.presentationId
+//         );
+//
+//         res.status(200).json({
+//             message: 'Stock updated successfully',
+//             presentation: updatedPresentation,
+//             productId: product._id
+//         });
+//
+//     } catch (error) {
+//         console.error('Error in PUT /products/presentation/:presentationId:', error);
+//         res.status(500).json({ 
+//             error: 'Internal server error', 
+//             details: error.message 
+//         });
+//     }
+// });
