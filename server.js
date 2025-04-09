@@ -54,7 +54,7 @@ const productSchema = new mongoose.Schema({
     volumen: {
         type: String,
         enum: ['50ml', '75ml', '100ml', '150ml', '200ml'],
-        unique: false  // Remove unique constraint
+        unique: false  // Ensure this is false
     }
     // Removed presentacion field
 });
@@ -97,7 +97,7 @@ app.post('/products', async (req, res) => {
 
             return {
                 updateOne: {
-                    filter: { codigo, volumen },
+                    filter: { codigo, volumen }, // Using compound key
                     update: {
                         $set: {
                             nombre,
