@@ -403,18 +403,91 @@ app.put('/products/id/:id', async (req, res) => {
     }
 });
 
-// GET: Retrieve a single product by _id for easier debugging:
-app.get('/products/id/:id', async (req, res) => {
+// Update GET single product endpoint
+app.get('/products/:_id', async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id);
+        if (!mongoose.Types.ObjectId.isValid(req.params._id)) {
+            return res.status(400).json({ error: 'Invalid product ID format' });
+        }
+        
+        const product = await Product.findById(req.params._id);
         if (product) {
             res.status(200).json(product);
         } else {
             res.status(404).json({ error: 'Product not found' });
         }
     } catch (error) {
-        console.error('Error in GET /products/id/:id:', error);
+        console.error('Error in GET /products/:_id:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Update PUT endpoint
+app.put('/products/:_id', async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params._id)) {
+            return res.status(400).json({ error: 'Invalid product ID format' });
+        }
+
+        const product = await Product.findByIdAndUpdate(
+            req.params._id,
+            req.body,
+            { new: true }
+        );
+        
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.status(200).json(product);
+    } catch (error) {
+        console.error('Error in PUT /products/:_id:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Update DELETE endpoint
+app.delete('/products/:_id', async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params._id)) {
+            return res.status(400).json({ error: 'Invalid product ID format' });
+        }
+
+        const product = await Product.findByIdAndDelete(req.params._id);
+        if (product) {
+            res.status(200).json({ message: 'Product deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'Product not found' });
+        }
+    } catch (error) {
+        console.error('Error in DELETE /products/:_id:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Update PATCH location endpoint
+app.patch('/products/location/:_id', async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params._id)) {
+            return res.status(400).json({ error: 'Invalid product ID format' });
+        }
+
+        const { location } = req.body;
+        if (!location) {
+            return res.status(400).json({ error: 'Location is required' });
+        }
+
+        const product = await Product.findById(req.params._id);
+        if (!product) {
+            return res.status(404).send('Product not found');
+        }
+
+        product.location = location;
+        await product.save();
+        res.json(product);
+    } catch (error) {
+        console.error('Error in PATCH /products/location/:_id:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
