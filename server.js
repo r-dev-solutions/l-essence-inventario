@@ -71,12 +71,20 @@ app.post('/products', async (req, res) => {
         // Ensure the input is always an array
         const products = Array.isArray(req.body) ? req.body : [req.body];
         
-        // Validate all products first
-        const invalidProducts = products.filter(p => !p.codigo || !p.volumen);
+        // Enhanced validation
+        const invalidProducts = products.map(p => {
+            const errors = [];
+            if (!p.codigo) errors.push('Missing codigo');
+            if (!p.volumen) errors.push('Missing volumen');
+            if (p.volumen && !['50ml', '75ml', '100ml', '150ml', '200ml'].includes(p.volumen)) {
+                errors.push('Invalid volumen value');
+            }
+            return errors.length ? { product: p, errors } : null;
+        }).filter(Boolean);
+
         if (invalidProducts.length > 0) {
             return res.status(400).json({
                 error: 'Validation failed',
-                details: 'All products must have codigo and volumen fields',
                 invalidProducts
             });
         }
@@ -126,9 +134,9 @@ app.post('/products', async (req, res) => {
             };
         });
 
+        // Remove bypassDocumentValidation option
         const bulkResult = await Product.bulkWrite(bulkOps, { 
-            ordered: false, // Continue processing even if some operations fail
-            bypassDocumentValidation: true 
+            ordered: false // Continue processing even if some operations fail
         });
         
         res.status(200).json({
@@ -142,7 +150,9 @@ app.post('/products', async (req, res) => {
         console.error('Error in POST /products:', error);
         res.status(500).json({ 
             error: 'Internal server error', 
-            details: error.message 
+            details: error.message.includes('duplicate key') 
+                ? 'Duplicate product detected' 
+                : error.message
         });
     }
 });
