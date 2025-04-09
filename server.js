@@ -363,7 +363,6 @@ app.put('/products/id/:id', async (req, res) => {
     try {
         // Validate ID format
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            console.log('Invalid ID format:', req.params.id);
             return res.status(400).json({ 
                 error: 'Invalid product ID format',
                 receivedId: req.params.id,
@@ -371,48 +370,50 @@ app.put('/products/id/:id', async (req, res) => {
             });
         }
 
-        // Log debugging information
-        console.log('Updating product with ID:', req.params.id);
-        console.log('Received data:', req.body);
-
-        // Check if product exists
-        const existingProduct = await Product.findById(req.params.id);
-        if (!existingProduct) {
-            console.log('Product not found with ID:', req.params.id);
-            const allProducts = await Product.find({}, '_id');
-            console.log('Available product IDs:', allProducts);
+        // Find the product
+        const product = await Product.findById(req.params.id);
+        if (!product) {
             return res.status(404).json({ 
                 error: 'Product not found',
-                details: `No product found with ID: ${req.params.id}`,
-                availableIds: allProducts.map(p => p._id)
+                details: `No product found with ID: ${req.params.id}`
             });
         }
 
-        // Validate request body
-        if (!req.body || Object.keys(req.body).length === 0) {
-            return res.status(400).json({ error: 'Request body is empty' });
+        // Handle presentaciones updates
+        if (req.body.presentaciones) {
+            req.body.presentaciones.forEach(newPres => {
+                const existingPres = product.presentaciones.find(p => 
+                    p.presentacion === newPres.presentacion
+                );
+                
+                if (existingPres) {
+                    // Update existing presentation
+                    existingPres.stock = newPres.stock || existingPres.stock;
+                } else {
+                    // Add new presentation
+                    product.presentaciones.push({
+                        presentacion: newPres.presentacion,
+                        stock: newPres.stock || 0
+                    });
+                }
+            });
         }
 
-        const product = await Product.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { 
-                new: true,
-                runValidators: true // Ensure validations are run on update
+        // Update other fields
+        const fieldsToUpdate = Object.keys(req.body).filter(key => key !== 'presentaciones');
+        fieldsToUpdate.forEach(field => {
+            if (req.body[field] !== undefined) {
+                product[field] = req.body[field];
             }
-        );
+        });
 
-        if (product) {
-            console.log('Successfully updated product:', product);
-            res.status(200).json(product);
-        } else {
-            console.log('Unexpected error: Product not found after update');
-            res.status(404).json({ error: 'Product not found' });
-        }
+        // Save the updated product
+        const updatedProduct = await product.save();
+        res.status(200).json(updatedProduct);
+
     } catch (error) {
         console.error('Error in PUT /products/id/:id:', error);
         
-        // Handle validation errors specifically
         if (error.name === 'ValidationError') {
             return res.status(400).json({ 
                 error: 'Validation failed',
