@@ -71,6 +71,16 @@ app.post('/products', async (req, res) => {
         // Ensure the input is always an array
         const products = Array.isArray(req.body) ? req.body : [req.body];
         
+        // Validate all products first
+        const invalidProducts = products.filter(p => !p.codigo || !p.volumen);
+        if (invalidProducts.length > 0) {
+            return res.status(400).json({
+                error: 'Validation failed',
+                details: 'All products must have codigo and volumen fields',
+                invalidProducts
+            });
+        }
+
         // Process products with bulk operations
         const bulkOps = products.map(productData => {
             const { 
