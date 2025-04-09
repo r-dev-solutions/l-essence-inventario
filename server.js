@@ -54,13 +54,16 @@ const productSchema = new mongoose.Schema({
     volumen: {
         type: String,
         enum: ['50ml', '75ml', '100ml', '150ml', '200ml'],
-        unique: true
+        unique: false  // Remove unique constraint
     }
     // Removed presentacion field
 });
 
 // Create a Product model
 const Product = mongoose.model('Product', productSchema);
+
+// Add compound index for codigo + volumen
+Product.collection.createIndex({ codigo: 1, volumen: 1 }, { unique: true });
 
 // POST: Add or update product stock
 app.post('/products', async (req, res) => {
@@ -100,7 +103,10 @@ app.post('/products', async (req, res) => {
 
             return {
                 updateOne: {
-                    filter: { codigo: productData.codigo },
+                    filter: { 
+                        codigo: productData.codigo,
+                        volumen: productData.volumen  // Now using compound key
+                    },
                     update: {
                         $set: {
                             nombre,
@@ -140,6 +146,12 @@ app.post('/products', async (req, res) => {
 
     } catch (error) {
         console.error('Error in POST /products:', error);
+        if (error.code === 11000) {
+            return res.status(400).json({ 
+                error: 'Duplicate product',
+                details: 'A product with this codigo and volumen combination already exists'
+            });
+        }
         res.status(500).json({ 
             error: 'Internal server error', 
             details: error.message 
