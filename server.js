@@ -94,7 +94,7 @@ app.post('/products', async (req, res) => {
         // Process products with bulk operations
         const bulkOps = products.map(productData => {
             const { 
-                codigo, volumen,
+                codigo, // Solo necesitamos codigo para el filtro
                 nombre = '', concentracion_alcohol = 0,
                 location = '', precio = 0, precio_neto = 0, 
                 precio_neto_cs = 0, descripcion = '', marca = '', 
@@ -107,7 +107,7 @@ app.post('/products', async (req, res) => {
 
             return {
                 updateOne: {
-                    filter: { codigo, volumen }, // Using compound key
+                    filter: { codigo }, // Cambiamos a solo codigo como filtro
                     update: {
                         $set: {
                             nombre,
@@ -127,11 +127,11 @@ app.post('/products', async (req, res) => {
                             imagen_secundaria,
                             imagen_alternativa,
                             location,
-                            volumen
+                            volumen // Mantenemos el volumen en los datos
                         },
-                        $inc: { stock: stock } // Increment stock instead of replacing
+                        $inc: { stock: stock }
                     },
-                    upsert: true // This will update if exists, insert if not
+                    upsert: true
                 }
             };
         });
