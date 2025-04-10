@@ -31,7 +31,10 @@ const productSchema = new mongoose.Schema({
     precio: Number,
     precio_neto: Number,
     precio_neto_cs: Number,
-    codigo: String,
+    codigo: {
+        type: String,
+        unique: true  // Solo el código debe ser único
+    },
     descripcion: String,
     marca: String,
     genero: {
@@ -53,17 +56,16 @@ const productSchema = new mongoose.Schema({
     location: String,
     volumen: {
         type: String,
-        enum: ['50ml', '75ml', '100ml', '150ml', '200ml'],
-        unique: false  // Ensure this is false
+        enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
+        // Eliminamos unique: false ya que no es necesario
     }
-    // Removed presentacion field
 });
 
 // Create a Product model
 const Product = mongoose.model('Product', productSchema);
 
-// Add compound index for codigo + volumen
-Product.collection.createIndex({ codigo: 1, volumen: 1 }, { unique: true });
+// Eliminar este índice compuesto único
+// Product.collection.createIndex({ codigo: 1, volumen: 1 }, { unique: true });
 
 // POST: Add or update product stock
 app.post('/products', async (req, res) => {
