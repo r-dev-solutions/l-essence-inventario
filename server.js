@@ -57,7 +57,7 @@ const productSchema = new mongoose.Schema({
     volumen: {
         type: String,
         enum: ['50ml', '75ml', '100ml', '150ml', '200ml']
-        // Eliminamos unique: false ya que no es necesario
+        // Remove any unique constraints completely
     }
 });
 
@@ -94,7 +94,7 @@ app.post('/products', async (req, res) => {
         // Process products with bulk operations
         const bulkOps = products.map(productData => {
             const { 
-                codigo,
+                codigo, // Only codigo is needed for filtering
                 volumen, // Add volumen to destructured properties
                 nombre = '', concentracion_alcohol = 0,
                 location = '', precio = 0, precio_neto = 0, 
@@ -108,7 +108,7 @@ app.post('/products', async (req, res) => {
 
             return {
                 updateOne: {
-                    filter: { codigo },
+                    filter: { codigo }, // Only filter by codigo
                     update: {
                         $set: {
                             nombre,
