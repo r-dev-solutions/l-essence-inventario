@@ -94,7 +94,8 @@ app.post('/products', async (req, res) => {
         // Process products with bulk operations
         const bulkOps = products.map(productData => {
             const { 
-                codigo, // Solo necesitamos codigo para el filtro
+                codigo,
+                volumen, // Add volumen to destructured properties
                 nombre = '', concentracion_alcohol = 0,
                 location = '', precio = 0, precio_neto = 0, 
                 precio_neto_cs = 0, descripcion = '', marca = '', 
@@ -107,7 +108,7 @@ app.post('/products', async (req, res) => {
 
             return {
                 updateOne: {
-                    filter: { codigo }, // Cambiamos a solo codigo como filtro
+                    filter: { codigo },
                     update: {
                         $set: {
                             nombre,
@@ -127,7 +128,7 @@ app.post('/products', async (req, res) => {
                             imagen_secundaria,
                             imagen_alternativa,
                             location,
-                            volumen // Mantenemos el volumen en los datos
+                            volumen // Now properly defined
                         },
                         $inc: { stock: stock }
                     },
