@@ -340,13 +340,13 @@ app.put('/products/id/:id', async (req, res) => {
         delete updateData._id;
         delete updateData.__v;
 
-        // Special handling for stock - add to existing value
-        if (updateData.stock !== undefined) {
-            const currentProduct = await Product.findById(req.params.id);
-            if (currentProduct) {
-                updateData.stock = currentProduct.stock + updateData.stock;
-            }
-        }
+        // Remove special handling for stock - no longer auto-increment
+        // if (updateData.stock !== undefined) {
+        //     const currentProduct = await Product.findById(req.params.id);
+        //     if (currentProduct) {
+        //         updateData.stock = currentProduct.stock + updateData.stock;
+        //     }
+        // }
 
         const product = await Product.findByIdAndUpdate(
             req.params.id,
