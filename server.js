@@ -371,21 +371,26 @@ app.put('/products/id/:id', async (req, res) => {
     }
 });
 
-// Update GET single product endpoint
-app.get('/products/:_id', async (req, res) => {
+// Add this new GET endpoint
+app.get('/products/id/:id', async (req, res) => {
     try {
-        if (!mongoose.Types.ObjectId.isValid(req.params._id)) {
-            return res.status(400).json({ error: 'Invalid product ID format' });
+        // Validate ID format
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ 
+                error: 'Invalid product ID format',
+                receivedId: req.params.id,
+                expectedFormat: 'MongoDB ObjectId'
+            });
         }
-        
-        const product = await Product.findById(req.params._id);
+
+        const product = await Product.findById(req.params.id);
         if (product) {
             res.status(200).json(product);
         } else {
             res.status(404).json({ error: 'Product not found' });
         }
     } catch (error) {
-        console.error('Error in GET /products/:_id:', error);
+        console.error('Error in GET /products/id/:id:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
